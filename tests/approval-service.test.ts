@@ -1,8 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { ApprovalService } from "../src/application/approval-service.js";
 import { ConflictError } from "../src/domain/errors.js";
+import type { ApprovalRequest } from "../src/domain/approval-request.js";
 import { InMemoryApprovalRepository } from "../src/infrastructure/repositories/in-memory-approval-repository.js";
-import type { NotificationService } from "../src/application/ports/notification-service.js";
+import { MockNotificationService, type NotificationService } from "../src/application/ports/notification-service.js";
 
 const input = {
   title: "Publicar pagos v2",
@@ -28,6 +29,25 @@ describe("ApprovalService", () => {
     const service = new ApprovalService(new InMemoryApprovalRepository(), undefined, () => "notified-id", notifications);
     const created = await service.create(input);
     expect(notified).toEqual([created.id]);
+  });
+
+  it("simula el envio de un correo electronico de prueba", async () => {
+    const messages: string[] = [];
+    const notifications = new MockNotificationService((message) => messages.push(message));
+    const request: ApprovalRequest = {
+      ...input,
+      id: "email-test-id",
+      status: "PENDING",
+      createdAt: "2026-07-10T12:00:00.000Z",
+      updatedAt: "2026-07-10T12:00:00.000Z",
+      history: [],
+    };
+
+    await notifications.notifyRequestCreated(request);
+
+    expect(messages).toHaveLength(1);
+    expect(messages[0]).toContain("[MOCK_EMAIL]");
+    expect(messages[0]).toContain(request.approver);
   });
 
   it("conserva la solicitud cuando el servicio SMTP no esta disponible", async () => {
