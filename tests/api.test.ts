@@ -7,8 +7,8 @@ import { createApp } from "../src/interfaces/http/app.js";
 const validRequest = {
   title: "Acceso al tablero",
   description: "Se requiere acceso de lectura al tablero operativo",
-  requester: "ana.dev",
-  approver: "luis.lead",
+  requester: "ana.dev@bancobogota.com",
+  approver: "luis.lead@bancobogota.com",
   type: "ACCESS",
 };
 
@@ -18,7 +18,7 @@ describe("Approval API", () => {
 
   beforeEach(async () => {
     app = createApp(new ApprovalService(new InMemoryApprovalRepository()));
-    const tokenResponse = await request(app).get("/api/v1/auth/token?user=juan.lead").expect(200);
+    const tokenResponse = await request(app).get("/api/v1/auth/token?user=juan.lead@bancobogota.com").expect(200);
     headers = { Authorization: `Bearer ${tokenResponse.body.token}` };
   });
 
@@ -32,32 +32,39 @@ describe("Approval API", () => {
     await request(app).get(`/api/v1/requests/${created.body.id}`).set(headers).expect(200);
     const decided = await request(app).patch(`/api/v1/requests/${created.body.id}/decision`)
       .set(headers)
-      .send({ status: "APPROVED", user: "luis.lead", comment: "Acceso justificado" }).expect(200);
+      .send({ status: "APPROVED", user: "luis.lead@bancobogota.com", comment: "Acceso justificado" }).expect(200);
     expect(decided.body.status).toBe("APPROVED");
   });
 
-  it("permite iniciar sesion con usuario y contraseña iguales", async () => {
-    const login = await request(app).post("/api/v1/auth/login").send({ username: "juan.lead", password: "juan.lead" }).expect(200);
-    expect(login.body.user).toBe("juan.lead");
+  it("permite iniciar sesion con correo corporativo y la parte local como contraseña", async () => {
+    const login = await request(app).post("/api/v1/auth/login").send({ username: "juan.lead@bancobogota.com", password: "juan.lead" }).expect(200);
+    expect(login.body.user).toBe("juan.lead@bancobogota.com");
     expect(login.body.token).toBeTypeOf("string");
   });
 
   it("no permite consultar la bandeja de otro usuario autenticado", async () => {
-    const response = await request(app).get("/api/v1/requests?approver=luis.lead").set(headers).expect(401);
+    const response = await request(app).get("/api/v1/requests?approver=luis.lead@bancobogota.com").set(headers).expect(401);
     expect(response.body.code).toBe("UNAUTHORIZED");
   });
 
   it("filtra pendientes y genera notificaciones simuladas", async () => {
-    await request(app).post("/api/v1/requests").set(headers).send({ ...validRequest, approver: "juan.lead" }).expect(201);
-    const list = await request(app).get("/api/v1/requests?approver=juan.lead&status=PENDING").set(headers).expect(200);
+    await request(app).post("/api/v1/requests").set(headers).send({ ...validRequest, approver: "juan.lead@bancobogota.com" }).expect(201);
+    const list = await request(app).get("/api/v1/requests?approver=juan.lead@bancobogota.com&status=PENDING").set(headers).expect(200);
     expect(list.body).toHaveLength(1);
-    const notifications = await request(app).get("/api/v1/notifications?approver=juan.lead").set(headers).expect(200);
+    const notifications = await request(app).get("/api/v1/notifications?approver=juan.lead@bancobogota.com").set(headers).expect(200);
     expect(notifications.body[0].message).toContain("Acceso al tablero");
   });
 
   it("rechaza datos invalidos", async () => {
     const response = await request(app).post("/api/v1/requests").set(headers).send({ title: "x" }).expect(400);
     expect(response.body.code).toBe("VALIDATION_ERROR");
+  });
+
+  it("rechaza usuarios que no pertenecen a bancobogota.com", async () => {
+    await request(app).post("/api/v1/auth/login")
+      .send({ username: "juan.lead@gmail.com", password: "juan.lead" }).expect(400);
+    await request(app).post("/api/v1/requests").set(headers)
+      .send({ ...validRequest, approver: "externo@gmail.com" }).expect(400);
   });
 
   it("devuelve 404 para una solicitud inexistente", async () => {

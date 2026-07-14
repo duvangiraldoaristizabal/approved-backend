@@ -11,13 +11,19 @@ interface AuthenticatedRequest extends Request {
   user?: string;
 }
 
-const networkUserSchema = z.string().trim().min(3).max(80).regex(/^[a-zA-Z0-9._@-]+$/, "Usuario de red invalido");
+const corporateEmailSchema = z.string().trim().toLowerCase().email("Correo corporativo invalido")
+  .regex(/^[a-zA-Z0-9._-]+@bancobogota\.com$/, "El correo debe pertenecer al dominio bancobogota.com");
 const jwtSecret = process.env.JWT_SECRET ?? "approved-dev-secret";
 const jwtExpiresIn = process.env.JWT_EXPIRES_IN ?? "1h" as const;
-const allowedUsers = new Set(["juan.lead", "maria.dev", "ana.dev", "luis.lead"]);
+const allowedUsers = new Set([
+  "juan.lead@bancobogota.com",
+  "maria.dev@bancobogota.com",
+  "ana.dev@bancobogota.com",
+  "luis.lead@bancobogota.com",
+]);
 const loginSchema = z.object({
-  username: networkUserSchema,
-  password: networkUserSchema,
+  username: corporateEmailSchema,
+  password: z.string().trim().min(1).max(80),
 });
 
 const issueToken = (user: string) => jwt.sign({ sub: user, user }, jwtSecret, { expiresIn: jwtExpiresIn as jwt.SignOptions["expiresIn"] });
@@ -43,7 +49,7 @@ export function createApp(service: ApprovalService, corsOrigin = "http://localho
 
   app.get("/api/v1/auth/token", async (request, response, next) => {
     try {
-      const { user } = z.object({ user: networkUserSchema }).parse(request.query);
+      const { user } = z.object({ user: corporateEmailSchema }).parse(request.query);
       response.json({ token: issueToken(user), user });
     } catch (error) { next(error); }
   });
@@ -51,7 +57,8 @@ export function createApp(service: ApprovalService, corsOrigin = "http://localho
   app.post("/api/v1/auth/login", async (request, response, next) => {
     try {
       const { username, password } = loginSchema.parse(request.body);
-      if (username !== password || !allowedUsers.has(username)) {
+      const expectedPassword = username.slice(0, username.indexOf("@"));
+      if (password !== expectedPassword || !allowedUsers.has(username)) {
         next(new UnauthorizedError("Credenciales invalidas"));
         return;
       }

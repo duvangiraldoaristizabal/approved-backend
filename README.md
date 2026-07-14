@@ -31,8 +31,8 @@ La API queda disponible en `http://localhost:3000`. PostgreSQL escucha en `local
 {
   "title": "Publicar pagos v2",
   "description": "Publicar la version validada en produccion",
-  "requester": "maria.dev",
-  "approver": "juan.lead",
+  "requester": "maria.dev@bancobogota.com",
+  "approver": "juan.lead@bancobogota.com",
   "type": "DEPLOYMENT"
 }
 ```
@@ -42,7 +42,7 @@ La API queda disponible en `http://localhost:3000`. PostgreSQL escucha en `local
 ```json
 {
   "status": "APPROVED",
-  "user": "juan.lead",
+  "user": "juan.lead@bancobogota.com",
   "comment": "Validaciones correctas"
 }
 ```
@@ -58,11 +58,15 @@ La API queda disponible en `http://localhost:3000`. PostgreSQL escucha en `local
 - Validacion en el borde HTTP mediante Zod.
 - Estados protegidos: solo el responsable decide y una solicitud finalizada no cambia nuevamente.
 
+## Usuarios de prueba
+
+Los usuarios se identifican con su correo corporativo `@bancobogota.com`. Para el entorno de prueba, la contraseña es la parte anterior al arroba. Por ejemplo, el usuario `juan.lead@bancobogota.com` usa la contraseña `juan.lead`.
+
 Ejecute `npm test` para las pruebas y `npm run build` para validar tipos y generar `dist/`.
 
 ## Notificacion por correo
 
-El llamado ocurre en `ApprovalService.create`, inmediatamente despues de persistir la solicitud. El adaptador Nodemailer se configura en `src/server.ts`. Si el responsable es `juan.lead`, `SMTP_EMAIL_DOMAIN=example.test` genera el destinatario `juan.lead@example.test`; tambien puede enviarse un correo completo como responsable.
+El llamado ocurre en `ApprovalService.create`, inmediatamente despues de persistir la solicitud. El adaptador Nodemailer se configura en `src/server.ts` y las solicitudes usan directamente el correo corporativo del responsable.
 
 Un fallo temporal de SMTP se registra en el servidor, pero no revierte ni oculta una solicitud que PostgreSQL ya confirmo. Para entrega garantizada en produccion, el siguiente paso seria implementar un outbox persistente con reintentos.
 

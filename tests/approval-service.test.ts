@@ -8,8 +8,8 @@ import { MockNotificationService, type NotificationService } from "../src/applic
 const input = {
   title: "Publicar pagos v2",
   description: "Publicar la version validada en produccion",
-  requester: "maria.dev",
-  approver: "juan.lead",
+  requester: "maria.dev@bancobogota.com",
+  approver: "juan.lead@bancobogota.com",
   type: "DEPLOYMENT" as const,
 };
 
@@ -62,7 +62,7 @@ describe("ApprovalService", () => {
   it("solo permite decidir al responsable", async () => {
     const service = new ApprovalService(new InMemoryApprovalRepository());
     const created = await service.create(input);
-    await expect(service.decide(created.id, "APPROVED", "otro.usuario", "Aprobado"))
+    await expect(service.decide(created.id, "APPROVED", "otro.usuario@bancobogota.com", "Aprobado"))
       .rejects.toBeInstanceOf(ConflictError);
   });
 
