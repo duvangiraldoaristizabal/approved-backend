@@ -14,6 +14,18 @@ npm run dev
 
 La API queda disponible en `http://localhost:3000`. PostgreSQL escucha en `localhost:5432`. Al usar Compose, Mailpit captura los correos SMTP en desarrollo y su interfaz queda en `http://localhost:8025`.
 
+## Modelo de base de datos
+
+El modelo PostgreSQL está disponible en `database/schema.sql`. El script es idempotente: crea las tablas, restricciones e índices únicamente cuando no existen.
+
+Con PostgreSQL iniciado mediante Docker Compose, puede ejecutarse así:
+
+```bash
+docker compose exec -T postgres psql -U approved -d approved < database/schema.sql
+```
+
+El modelo contiene las tablas `approval_requests` y `approval_history`, relacionadas mediante `approval_history.request_id`. Los usuarios se validan como correos en minúsculas del dominio `bancobogota.com`.
+
 ## Endpoints
 
 | Metodo | Ruta | Proposito |
